@@ -9,13 +9,21 @@ type Storage struct {
 	store map[string]interface{}
 }
 
-func (s *Storage) set (key string, value interface{}) string {
-	s.store[key] = value
+func (s *Storage) set (args []string) string {
+	switch len(args){
+	case 1 : return "(error) ERR wrong number of arguments for 'set' command\n"
+	case 2 : break
+	default : return "(error) ERR syntax error\n"
+	}
+	s.store[args[0]] = args[1]
 	return "OK\n"
 }
 
-func (s *Storage) get (key string) string {
-	value, exists := s.store[key]
+func (s *Storage) get (args []string) string {
+	if len(args) != 1 {
+		return "(error) ERR wrong number of arguments for 'get' command\n"
+	}
+	value, exists := s.store[args[0]]
 	if !exists {
 		return "(nil)\n"
 	}

@@ -42,7 +42,7 @@ func (server *Server) Run() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Server listening to %s:%s ... \n", server.host, server.port)
+	fmt.Printf("Server listening to %s:%s \n", server.host, server.port)
 	defer listener.Close()
 
 	for {
@@ -71,9 +71,9 @@ func (client *Client) handleRequest() {
 		var msg string
 		switch strings.ToLower(cmd[0]){
 		case "set":
-			msg = client.storage.set(cmd[1], cmd[2])
+			msg = client.storage.set(cmd[1:])
 		case "get":
-			msg = client.storage.get(cmd[1])
+			msg = client.storage.get(cmd[1:])
 		case "del":
 			msg = client.storage.del(cmd[1:])
 		}
