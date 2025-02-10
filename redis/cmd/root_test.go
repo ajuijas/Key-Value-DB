@@ -1,35 +1,10 @@
 package cmd
 
 import (
-	"bytes"
 	"net"
-	"os"
 	"testing"
 	"time"
 )
-
-func captureStandardOutput() (func () string) {
-	oldStdout := os.Stdout
-	oldStderr := os.Stderr
-
-	rOut, wOut, _ := os.Pipe()
-	os.Stdout = wOut
-	os.Stderr = wOut
-
-	return func() string {
-		wOut.Close()
-
-		var buf bytes.Buffer
-		_, _ = buf.ReadFrom(rOut)
-
-		rOut.Close()
-
-		os.Stdout = oldStdout
-		os.Stderr = oldStderr
-
-		return buf.String()
-	}
-}
 
 func Test_redis_commands(t *testing.T) {
 	tests := []struct {
@@ -50,7 +25,6 @@ func Test_redis_commands(t *testing.T) {
 	go rootCmd.Execute()
 
 	for _, test := range tests{
-		// captureStandardOutput := captureStandardOutput()
 
 		conn, err := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
 		if err!=nil {
@@ -76,6 +50,5 @@ func Test_redis_commands(t *testing.T) {
 		if got!=test.expacted {
 			t.Errorf("Expected <<%v>> Got <<%v>>", test.expacted, got)
 		}
-
 	}
 }
