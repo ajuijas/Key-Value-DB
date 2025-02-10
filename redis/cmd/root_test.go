@@ -11,20 +11,26 @@ func Test_redis_commands(t *testing.T) {
 		command string
 		expacted string
 	}{
-		{"SET key value", "OK\n"},
+		{"SET key value1", "OK\n"},
 		{"SET key value", "OK\n"},
 		{"GET key", "\"value\"\n"},
+
 		{"DEL key", "(integer) 1\n"},
+
 		{"SET key value", "OK\n"},
 		{"SET key1 value", "OK\n"},
-		{"DEL key key1 key2", "(integer) 2"},
-		{"GET key", "nil\n"},
+		{"DEL key key1 key2", "(integer) 2\n"},
+
+		{"GET key", "(nil)\n"},
+
+		{"SET key value invalid", "(error) ERR syntax error"},
+		{"GET key key2", "(error) ERR wrong number of arguments for 'get' command"},
 	}
 
-	host, port, db := "localhost", "8080", "0"
+	host, port := "localhost", "8081"
 
 	// start the server 
-	rootCmd.SetArgs([]string{"-h", host, "-p", port, "-d", db})
+	rootCmd.SetArgs([]string{"-H", host, "-p", port})
 	go rootCmd.Execute()
 
 	for _, test := range tests{
@@ -35,13 +41,14 @@ func Test_redis_commands(t *testing.T) {
 		}
 		defer conn.Close()
 
-		request := test.command
+		request := test.command + "\n"
 		_, err = conn.Write([]byte(request))
 		if err!=nil {
 			t.Fatalf("Error while write to connection")
 		}
 
 		buffer := make([]byte, 4096)
+
 		n, err := conn.Read(buffer)
 
 		if err!=nil {

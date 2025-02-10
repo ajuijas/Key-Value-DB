@@ -75,7 +75,7 @@ func (client *Client) handleRequest() {
 		case "get":
 			msg = client.storage.get(cmd[1])
 		case "del":
-			msg = client.storage.del(cmd[1])
+			msg = client.storage.del(cmd[1:])
 		}
 		client.conn.Write([]byte(msg))
 	}

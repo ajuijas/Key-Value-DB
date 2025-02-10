@@ -1,6 +1,9 @@
 package cmd
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Storage struct {
 	store map[string]interface{}
@@ -17,16 +20,26 @@ func (s *Storage) get (key string) string {
 		return "(nil)\n"
 	}
 	if strVal, ok := value.(string); ok {
-		return strVal + "\n"
+		return wrapString(strVal) + "\n"
 	}
 	return fmt.Sprintf("%v", value) 
 }
 
-func (s *Storage) del (key string) string {
-	delete(s.store, key)
-	return "1"
+func (s *Storage) del (keys []string) string {
+	var i int = 0
+	for _, key := range keys{
+		if s.store[key]!=nil{
+			i = i +1
+			delete(s.store, key)
+		}
+	}
+	return "(integer) " + strconv.Itoa(i) + "\n"
 }
 
 func getStorage() *Storage {
 	return &Storage{store: make(map[string]interface{})}
+}
+
+func wrapString(str string) string {
+	return "\"" + str + "\""
 }
