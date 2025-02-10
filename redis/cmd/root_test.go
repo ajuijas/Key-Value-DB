@@ -15,6 +15,9 @@ func Test_redis_commands(t *testing.T) {
 		{"SET key value", "OK\n"},
 		{"GET key", "\"value\"\n"},
 		{"DEL key", "(integer) 1\n"},
+		{"SET key value", "OK\n"},
+		{"SET key1 value", "OK\n"},
+		{"DEL key key1 key2", "(integer) 2"},
 		{"GET key", "nil\n"},
 	}
 
