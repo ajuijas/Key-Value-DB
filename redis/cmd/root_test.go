@@ -94,3 +94,65 @@ func Test_redis_commands(t *testing.T) {
 		}
 	}
 }
+
+func Test_atomic_ops(t *testing.T) {
+	// Testing the incr operations are atomic or not.
+	// I will create 5 clients, from each client I will increase value of a key 100000 times.
+	/* trunk-ignore(git-diff-check/error) */
+	// The final value of the key will be 100000 if all the operations where happend atomically.
+	// Now I have no idea if this test will work or not. Lets see it
+
+
+	host, port := "localhost", "8082"
+
+	// start the server
+	rootCmd.SetArgs([]string{"-H", host, "-p", port})
+	go rootCmd.Execute()
+
+	conn1, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn2, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn3, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn4, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn5, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+
+	defer conn1.Close()
+	defer conn2.Close()
+	defer conn3.Close()
+	defer conn4.Close()
+	defer conn5.Close()
+
+	connections := []net.Conn{conn1, conn2, conn3, conn4, conn5}
+	key := "test_atomic"
+	val := 0
+	for {
+		for _, connection := range connections{
+			connection.Write([]byte("incr " + key + "\n"))
+			connection.Write([]byte("incrby " + key + "1\n"))
+			val += 2
+		}
+		if val >= 100000 {
+			break
+		}
+	}
+
+		_, err := conn1.Write([]byte("get " + key + "\n"))
+		if err!=nil {
+			t.Fatalf("Error while write to connection")
+		}
+
+		buffer := make([]byte, 4096)
+
+		n, err := conn1.Read(buffer)
+
+		if err!=nil {
+			t.Fatalf("Error reading from connection")
+		}
+
+		got := string(buffer[:n])
+
+		if got!="100000" {
+			t.Errorf("Expected <<%v>> Got <<%v>>", "100000", got)
+		}
+
+
+}
