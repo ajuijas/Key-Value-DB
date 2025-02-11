@@ -37,6 +37,7 @@ func (s *Storage) incr (args []string) string {
 	if len(args) != 1 {
 		return "(error) ERR wrong number of arguments for 'incr' command\n"
 	}
+	return ""
 
 }
 
