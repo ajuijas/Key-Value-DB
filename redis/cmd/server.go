@@ -117,7 +117,10 @@ func (client *Client) handleMulti (args []string) string {
 	}
 
 	var msg string
-	// TODO: make operations in the list atomic
+
+	client.storage.mutexMulti.Lock()
+	defer client.storage.mutexMulti.Unlock()
+
 	for i, cmd := range cmdList {
 		resp := client.executeCmd(cmd)
 		msg += fmt.Sprintf("%v) %v", i+1, resp)

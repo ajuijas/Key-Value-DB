@@ -9,6 +9,7 @@ import (
 type Storage struct {
 	store map[string]interface{}
 	mutex sync.Mutex
+	mutexMulti sync.Mutex
 }
 
 func (s *Storage) set (args []string) string {

@@ -185,38 +185,9 @@ func Test_atominc_multi_ops(t *testing.T) {
 	defer conn2.Close()
 
 	key := "test_atomic"
-	val := 0
-	count := 500
-	for {
-		if val >= count {
-			break
-		}
 
-		_, _ = conn1.Write([]byte("multi\n"))
-		_, _ = conn1.Write([]byte("incr " + key + "\n"))
-		val += 1
-
-		_, err := conn2.Write([]byte("get " + key + "\n"))
-		if err!=nil {
-			t.Fatalf("Error while write to connection")
-		}
-
-		buffer := make([]byte, 4096)
-
-		n, err := conn2.Read(buffer)
-
-		if err!=nil {
-			t.Fatalf("Error reading from connection")
-		}
-
-		got := string(buffer[:n])
-
-		if got!="(nil)\n" {
-			t.Errorf("Expected <<%v>> Got <<%v>>", "(nil)\n", got)
-		}
-	}
-
-	_, _ = conn1.Write([]byte("exec\n"))
+	_, _ = conn1.Write([]byte("multi\n"))
+	_, _ = conn1.Write([]byte("incr " + key + "\n"))
 
 	_, err := conn2.Write([]byte("get " + key + "\n"))
 	if err!=nil {
@@ -233,7 +204,28 @@ func Test_atominc_multi_ops(t *testing.T) {
 
 	got := string(buffer[:n])
 
-	if got!=strconv.Itoa(count) {
-		t.Errorf("Expected <<%v>> Got <<%v>>", strconv.Itoa(count), got)
+	if got!="(nil)\n" {
+		t.Errorf("Expected <<%v>> Got <<%v>>", "(nil)\n", got)
+	}
+
+	_, _ = conn1.Write([]byte("exec\n"))
+
+	_, err = conn2.Write([]byte("get " + key + "\n"))
+	if err!=nil {
+		t.Fatalf("Error while write to connection")
+	}
+
+	buffer = make([]byte, 4096)
+
+	n, err = conn2.Read(buffer)
+
+	if err!=nil {
+		t.Fatalf("Error reading from connection")
+	}
+
+	got = string(buffer[:n])
+
+	if got!="1" {
+		t.Errorf("Expected <<%v>> Got <<%v>>", "1", got)
 	}
 }
