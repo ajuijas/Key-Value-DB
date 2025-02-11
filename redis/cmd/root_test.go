@@ -12,7 +12,8 @@ func Test_redis_commands(t *testing.T) {
 		command string
 		expacted string
 	}{
-		{"SET key value1", "OK\n"},
+		{"", "\n"},
+		{"SET key value1", "OK\n"}, // TODO: test case for lower letter commands
 		{"SET key value", "OK\n"},
 		{"GET key", "\"value\"\n"},
 
@@ -58,6 +59,8 @@ func Test_redis_commands(t *testing.T) {
 		{"DISCARD", "OK\n"},
 		{"GET key1", "(nil)\n"},
 		// TODO: Add testcases where error occured while using multi ops
+
+		{"exit", "\n"},
 	}
 
 	host, port := "localhost", "8081"

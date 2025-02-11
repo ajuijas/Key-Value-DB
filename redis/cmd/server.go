@@ -71,9 +71,15 @@ func (client *Client) handleRequest() {
 
 		cmd := strings.Fields(string(message))
 
+		if len(cmd) == 0 {
+			client.conn.Write([]byte("\n"))
+			continue
+		}
+
 		var msg string
 
 		switch strings.ToLower(cmd[0]){
+		case "exit": msg = "\n"; break
 		case "multi" : msg = client.handleMulti(cmd)
 		default : msg = client.executeCmd(cmd)
 		}
@@ -96,7 +102,7 @@ func (client *Client) handleMulti (args []string) string {
 
 		if err != nil {
 			client.conn.Close()
-			return "" // TODO: correct error handling
+			return "\n" // TODO: correct error handling
 		}
 
 		cmd := strings.Fields(string(message))
