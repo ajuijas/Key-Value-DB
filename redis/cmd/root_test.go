@@ -28,6 +28,23 @@ func Test_redis_commands(t *testing.T) {
 		{"GET key key2", "(error) ERR wrong number of arguments for 'get' command\n"},
 
 		{"HI abc defg", "(error) ERR unknown command 'HI', with args beginning with: 'abc' 'defg'\n"},
+
+		{"INCR key", "(integer) 1\n"},
+		{"INCR key", "(integer) 2\n"},
+		{"INCR key", "(integer) 3\n"},
+	
+		{"INCRBY key 3", "(integer) 6\n"},
+		{"INCRBY key -2", "(integer) 4\n"},
+		{"INCRBY key3 -2", "(integer) -2\n"},
+
+		{"INCR key key1", "(error) ERR wrong number of arguments for 'incr' command\n"},
+		{"INCRBY key", "(error) ERR wrong number of arguments for 'incrby' command\n"},
+		{"INCRBY key 5 key2", "(error) ERR wrong number of arguments for 'incrby' command\n"},
+		{"INCRBY key value", "(error) ERR value is not an integer or out of range\n"},
+
+		{"SET key notanint", "OK\n"},
+		{"INCR key", "(error) ERR value is not an integer or out of range\n"},
+		{"INCRBY key 1", "(error) ERR value is not an integer or out of range\n"},
 	}
 
 	host, port := "localhost", "8081"
