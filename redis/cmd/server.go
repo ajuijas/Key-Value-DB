@@ -69,13 +69,17 @@ func (client *Client) handleRequest() {
 		}
 		cmd := strings.Fields(string(message))
 		var msg string
-		switch strings.ToLower(cmd[0]){
+		switch strings.ToLower(cmd[0]){  // TODO: Is there better method than switch for this?
 		case "set":
 			msg = client.storage.set(cmd[1:])
 		case "get":
 			msg = client.storage.get(cmd[1:])
 		case "del":
 			msg = client.storage.del(cmd[1:])
+		case "incr":
+			msg = client.storage.incr(cmd[1:])
+		case "incrby":
+			msg = client.storage.incrby(cmd[1:])
 		default:
 			msg = "(error) ERR unknown command '" + cmd[0] + "', with args beginning with: '" + strings.Join(cmd[1:], "' '") + "'\n"
 		}
