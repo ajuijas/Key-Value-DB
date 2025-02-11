@@ -71,9 +71,15 @@ func (client *Client) handleRequest() {
 
 		cmd := strings.Fields(string(message))
 
+		if len(cmd) == 0 {
+			client.conn.Write([]byte("\n"))
+			continue
+		}
+
 		var msg string
 
 		switch strings.ToLower(cmd[0]){
+		case "exit": msg = "\n"; break
 		case "multi" : msg = client.handleMulti(cmd)
 		default : msg = client.executeCmd(cmd)
 		}
@@ -96,7 +102,7 @@ func (client *Client) handleMulti (args []string) string {
 
 		if err != nil {
 			client.conn.Close()
-			return "" // TODO: correct error handling
+			return "\n" // TODO: correct error handling
 		}
 
 		cmd := strings.Fields(string(message))
@@ -111,7 +117,10 @@ func (client *Client) handleMulti (args []string) string {
 	}
 
 	var msg string
-	// TODO: make operations in the list atomic
+
+	client.storage.mutexMulti.Lock()
+	defer client.storage.mutexMulti.Unlock()
+
 	for i, cmd := range cmdList {
 		resp := client.executeCmd(cmd)
 		msg += fmt.Sprintf("%v) %v", i+1, resp)
@@ -121,6 +130,10 @@ func (client *Client) handleMulti (args []string) string {
 
 func (client *Client) executeCmd (cmd []string) string {
 		var msg string
+
+		client.storage.mutex.Lock()
+		defer client.storage.mutex.Unlock()
+
 		switch strings.ToLower(cmd[0]){  // TODO: Is there any better method than switch for this?
 		case "set":
 			msg = client.storage.set(cmd[1:])
