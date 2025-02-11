@@ -33,15 +33,11 @@ func (s *Storage) get (args []string) string {
 	return fmt.Sprintf("%v", value) 
 }
 
-func (s *Storage) del (keys []string) string {
-	var i int = 0
-	for _, key := range keys{
-		if s.store[key]!=nil{
-			i = i +1
-			delete(s.store, key)
-		}
+func (s *Storage) incr (args []string) string {
+	if len(args) != 1 {
+		return "(error) ERR wrong number of arguments for 'incr' command\n"
 	}
-	return "(integer) " + strconv.Itoa(i) + "\n"
+
 }
 
 func getStorage() *Storage {
