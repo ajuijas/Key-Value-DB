@@ -18,6 +18,7 @@ type Server struct {
 // Client ...
 type Client struct {
 	conn net.Conn
+	reader *bufio.Reader
 	storage *Storage
 }
 
@@ -60,16 +61,67 @@ func (server *Server) Run() {
 }
 
 func (client *Client) handleRequest() {
-	reader := bufio.NewReader(client.conn)
+	client.reader = bufio.NewReader(client.conn)
 	for {
-		message, err := reader.ReadString('\n')
+		message, err := client.reader.ReadString('\n')
 		if err != nil {
 			client.conn.Close()
 			return
 		}
+
 		cmd := strings.Fields(string(message))
+
 		var msg string
-		switch strings.ToLower(cmd[0]){  // TODO: Is there better method than switch for this?
+
+		switch strings.ToLower(cmd[0]){
+		case "multi" : msg = client.handleMulti(cmd)
+		default : msg = client.executeCmd(cmd)
+		}
+		client.conn.Write([]byte(msg))
+	}
+}
+
+func (client *Client) handleMulti (args []string) string {
+
+	if len(args) != 1 {
+		return "(error) ERR wrong number of arguments for 'multi' command"
+	}
+
+	client.conn.Write([]byte("OK\n"))
+	var cmdList [][]string
+
+
+	for {
+		message, err := client.reader.ReadString('\n')
+
+		if err != nil {
+			client.conn.Close()
+			return "" // TODO: correct error handling
+		}
+
+		cmd := strings.Fields(string(message))
+		if strings.ToLower(cmd[0]) == "exec"{
+			break
+		}else if strings.ToLower(cmd[0]) == "discard"{
+			return "OK\n"
+		}else {
+			cmdList = append(cmdList, cmd)
+			client.conn.Write([]byte("QUEUED\n"))
+		}
+	}
+
+	var msg string
+	// TODO: make operations in the list atomic
+	for i, cmd := range cmdList {
+		resp := client.executeCmd(cmd)
+		msg += fmt.Sprintf("%v) %v", i+1, resp)
+	}
+	return msg
+}
+
+func (client *Client) executeCmd (cmd []string) string {
+		var msg string
+		switch strings.ToLower(cmd[0]){  // TODO: Is there any better method than switch for this?
 		case "set":
 			msg = client.storage.set(cmd[1:])
 		case "get":
@@ -83,7 +135,5 @@ func (client *Client) handleRequest() {
 		default:
 			msg = "(error) ERR unknown command '" + cmd[0] + "', with args beginning with: '" + strings.Join(cmd[1:], "' '") + "'\n"
 		}
-	
-		client.conn.Write([]byte(msg))
-	}
+		return msg
 }
