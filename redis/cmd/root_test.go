@@ -45,6 +45,18 @@ func Test_redis_commands(t *testing.T) {
 		{"SET key notanint", "OK\n"},
 		{"INCR key", "(error) ERR value is not an integer or out of range\n"},
 		{"INCRBY key 1", "(error) ERR value is not an integer or out of range\n"},
+
+		{"MULTI", "OK\n"},
+		{"INCR foo", "QUEUED\n"},
+		{"SET bar 1", "QUEUED\n"},
+		{"EXEC", "1) (integer) 1\n2) OK\n"},
+
+		{"MULTI", "OK\n"},
+		{"INCR foo", "QUEUED\n"},
+		{"SET key1 1", "QUEUED\n"},
+		{"DISCARD", "OK\n"},
+		{"GET key1", "(nil)\n"},
+		// TODO: Add testcases where error occured while using multi ops
 	}
 
 	host, port := "localhost", "8081"
@@ -53,13 +65,13 @@ func Test_redis_commands(t *testing.T) {
 	rootCmd.SetArgs([]string{"-H", host, "-p", port})
 	go rootCmd.Execute()
 
-	for _, test := range tests{
+	conn, err := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	if err!=nil {
+		t.Fatalf("Unable to connect to test server")
+	}
+	defer conn.Close()
 
-		conn, err := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-		if err!=nil {
-			t.Fatalf("Unable to connect to test server")
-		}
-		defer conn.Close()
+	for _, test := range tests{
 
 		request := test.command + "\n"
 		_, err = conn.Write([]byte(request))
