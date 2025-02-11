@@ -99,13 +99,12 @@ func Test_redis_commands(t *testing.T) {
 	}
 }
 
-func Test_atomic_ops(t *testing.T) {
+func Test_atomic_operations(t *testing.T) {
 	// Testing the incr operations are atomic or not.
 	// I will create 5 clients, from each client I will increase value of a key 100 times.
 	/* trunk-ignore(git-diff-check/error) */
 	// The final value of the key will be 100 if all the operations where happend atomically.
 	// Now I have no idea if this test will work or not. Lets see it
-
 
 	host, port := "localhost", "8082"
 
@@ -167,6 +166,74 @@ func Test_atomic_ops(t *testing.T) {
 		if got!=strconv.Itoa(count) {
 			t.Errorf("Expected <<%v>> Got <<%v>>", strconv.Itoa(count), got)
 		}
+}
 
+func Test_atominc_multi_ops(t *testing.T) {
+	// Testing the multi operations are atomic or not.
+	// I will incr the value of a key 1000 times and try to read the value from another client.
+	// I should be able to read the final value only.
+	host, port := "localhost", "8083"
 
+	// start the server
+	rootCmd.SetArgs([]string{"-H", host, "-p", port})
+	go rootCmd.Execute()
+
+	conn1, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn2, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+
+	defer conn1.Close()
+	defer conn2.Close()
+
+	key := "test_atomic"
+	val := 0
+	count := 500
+	for {
+		if val >= count {
+			break
+		}
+
+		_, _ = conn1.Write([]byte("multi\n"))
+		_, _ = conn1.Write([]byte("incr " + key + "\n"))
+		val += 1
+
+		_, err := conn2.Write([]byte("get " + key + "\n"))
+		if err!=nil {
+			t.Fatalf("Error while write to connection")
+		}
+
+		buffer := make([]byte, 4096)
+
+		n, err := conn2.Read(buffer)
+
+		if err!=nil {
+			t.Fatalf("Error reading from connection")
+		}
+
+		got := string(buffer[:n])
+
+		if got!="(nil)\n" {
+			t.Errorf("Expected <<%v>> Got <<%v>>", "(nil)\n", got)
+		}
+	}
+
+	_, _ = conn1.Write([]byte("exec\n"))
+
+	_, err := conn2.Write([]byte("get " + key + "\n"))
+	if err!=nil {
+		t.Fatalf("Error while write to connection")
+	}
+
+	buffer := make([]byte, 4096)
+
+	n, err := conn2.Read(buffer)
+
+	if err!=nil {
+		t.Fatalf("Error reading from connection")
+	}
+
+	got := string(buffer[:n])
+
+	if got!=strconv.Itoa(count) {
+		t.Errorf("Expected <<%v>> Got <<%v>>", strconv.Itoa(count), got)
+	}
 }
