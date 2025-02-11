@@ -76,7 +76,10 @@ func (client *Client) handleRequest() {
 			msg = client.storage.get(cmd[1:])
 		case "del":
 			msg = client.storage.del(cmd[1:])
+		default:
+			msg = "(error) ERR unknown command '" + cmd[0] + "', with args beginning with: '" + strings.Join(cmd[1:], "' '") + "'\n"
 		}
+	
 		client.conn.Write([]byte(msg))
 	}
 }

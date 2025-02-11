@@ -26,6 +26,8 @@ func Test_redis_commands(t *testing.T) {
 		{"SET key value invalid", "(error) ERR syntax error\n"},
 		{"SET key", "(error) ERR wrong number of arguments for 'set' command\n"},
 		{"GET key key2", "(error) ERR wrong number of arguments for 'get' command\n"},
+
+		{"HI abc defg", "(error) ERR unknown command 'HI', with args beginning with: 'abc' 'defg'\n"},
 	}
 
 	host, port := "localhost", "8081"
