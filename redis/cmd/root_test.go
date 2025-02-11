@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"net"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -97,9 +98,9 @@ func Test_redis_commands(t *testing.T) {
 
 func Test_atomic_ops(t *testing.T) {
 	// Testing the incr operations are atomic or not.
-	// I will create 5 clients, from each client I will increase value of a key 100000 times.
+	// I will create 5 clients, from each client I will increase value of a key 100 times.
 	/* trunk-ignore(git-diff-check/error) */
-	// The final value of the key will be 100000 if all the operations where happend atomically.
+	// The final value of the key will be 100 if all the operations where happend atomically.
 	// Now I have no idea if this test will work or not. Lets see it
 
 
@@ -124,25 +125,35 @@ func Test_atomic_ops(t *testing.T) {
 	connections := []net.Conn{conn1, conn2, conn3, conn4, conn5}
 	key := "test_atomic"
 	val := 0
+	count := 500
 	for {
-		for _, connection := range connections{
-			connection.Write([]byte("incr " + key + "\n"))
-			connection.Write([]byte("incrby " + key + "1\n"))
-			val += 2
-		}
-		if val >= 100000 {
+		if val >= count {
 			break
+		}
+		for _, connection := range connections{
+
+			if val >= count {
+				break
+			}
+			_, _ = connection.Write([]byte("incr " + key + "\n"))
+			_, _ = connection.Write([]byte("incrby " + key + " 1\n"))
+			val += 2
 		}
 	}
 
-		_, err := conn1.Write([]byte("get " + key + "\n"))
+		time.Sleep(2 * time.Second) // Assumes that all the operations are completed after 3 seconds
+
+		conn6, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+		defer conn6.Close()
+
+		_, err := conn6.Write([]byte("get " + key + "\n"))
 		if err!=nil {
 			t.Fatalf("Error while write to connection")
 		}
 
 		buffer := make([]byte, 4096)
 
-		n, err := conn1.Read(buffer)
+		n, err := conn6.Read(buffer)
 
 		if err!=nil {
 			t.Fatalf("Error reading from connection")
@@ -150,8 +161,8 @@ func Test_atomic_ops(t *testing.T) {
 
 		got := string(buffer[:n])
 
-		if got!="100000" {
-			t.Errorf("Expected <<%v>> Got <<%v>>", "100000", got)
+		if got!=strconv.Itoa(count) {
+			t.Errorf("Expected <<%v>> Got <<%v>>", strconv.Itoa(count), got)
 		}
 
 

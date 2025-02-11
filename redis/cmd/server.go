@@ -121,6 +121,10 @@ func (client *Client) handleMulti (args []string) string {
 
 func (client *Client) executeCmd (cmd []string) string {
 		var msg string
+
+		client.storage.mutex.Lock()
+		defer client.storage.mutex.Unlock()
+
 		switch strings.ToLower(cmd[0]){  // TODO: Is there any better method than switch for this?
 		case "set":
 			msg = client.storage.set(cmd[1:])
