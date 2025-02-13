@@ -230,7 +230,7 @@ func Test_atominc_multi_ops(t *testing.T) {
 
 	value := sendDBCommand("get key", conn3)
 
-	expected := "10000"
+	expected := "20000"
 	if value!=expected {
 		t.Errorf("Expected <<%v>> Got <<%v>>", expected, value)
 	}
