@@ -13,6 +13,10 @@ func Test_redis_commands(t *testing.T) {
 		expacted string
 	}{
 		{"", "\n"},
+		{"SET key \"value with space\"", "OK\n"},
+		{"SET \"key with space\" \"value with space\"", "OK\n"},
+		{"SET 'key with space' 'value with space'", "OK\n"},
+		{"GET 'key with space'", "\"value with space\"\n"},
 		{"SET key value1", "OK\n"}, // TODO: test case for lower letter commands
 		{"SET key value", "OK\n"},
 		{"GET key", "\"value\"\n"},
@@ -49,9 +53,12 @@ func Test_redis_commands(t *testing.T) {
 		{"INCRBY key 1", "(error) ERR value is not an integer or out of range\n"},
 
 		{"MULTI", "OK\n"},
+		{"EXEC", "\n"},
+
+		{"MULTI", "OK\n"},
 		{"INCR foo", "QUEUED\n"},
 		{"SET bar 1", "QUEUED\n"},
-		{"EXEC", "1) (integer) 1\n2) OK\n"},
+		{"EXEC", "\n1) (integer) 1\n2) OK\n"},
 
 		{"MULTI", "OK\n"},
 		{"INCR foo", "QUEUED\n"},
@@ -168,64 +175,63 @@ func Test_atomic_operations(t *testing.T) {
 		}
 }
 
+func sendDBCommand(cmd string, conn net.Conn) string {
+	_, err := conn.Write([]byte(cmd + "\n"))
+	if err!=nil {
+		panic("Error while write to connection")
+	}
+
+	buffer := make([]byte, 4096)
+
+	n, err := conn.Read(buffer)
+
+	if err!=nil {
+		panic("Error reading from connection")
+	}
+	got := string(buffer[:n])
+	return got
+}
+
 func Test_atominc_multi_ops(t *testing.T) {
 	// Testing the multi operations are atomic or not.
 	// I will incr the value of a key 1000 times and try to read the value from another client.
 	// I should be able to read the final value only.
+
 	host, port := "localhost", "8083"
 
 	// start the server
 	rootCmd.SetArgs([]string{"-H", host, "-p", port})
 	go rootCmd.Execute()
 
+	n := 10000
+
 	conn1, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
 	conn2, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn3, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
 
 	defer conn1.Close()
 	defer conn2.Close()
+	defer conn3.Close()
 
-	key := "test_atomic"
+	sendDBCommand("multi", conn1)
+	sendDBCommand("multi", conn2)
 
-	_, _ = conn1.Write([]byte("multi\n"))
-	_, _ = conn1.Write([]byte("incr " + key + "\n"))
-
-	_, err := conn2.Write([]byte("get " + key + "\n"))
-	if err!=nil {
-		t.Fatalf("Error while write to connection")
-	}
-
-	buffer := make([]byte, 4096)
-
-	n, err := conn2.Read(buffer)
-
-	if err!=nil {
-		t.Fatalf("Error reading from connection")
-	}
-
-	got := string(buffer[:n])
-
-	if got!="(nil)\n" {
-		t.Errorf("Expected <<%v>> Got <<%v>>", "(nil)\n", got)
+	for i:=0; i<n; i ++{
+		_, _ = conn1.Write([]byte("incr key\n"))
+		_, _ = conn2.Write([]byte("incr key\n"))
+		// sendDBCommand("incr key", conn1)
+		// sendDBCommand("incrby key 1", conn1)
 	}
 
 	_, _ = conn1.Write([]byte("exec\n"))
+	_, _ = conn2.Write([]byte("exec\n"))
 
-	_, err = conn2.Write([]byte("get " + key + "\n"))
-	if err!=nil {
-		t.Fatalf("Error while write to connection")
-	}
+	// time.Sleep(2*time.Second)
 
-	buffer = make([]byte, 4096)
+	value := sendDBCommand("get key", conn3)
 
-	n, err = conn2.Read(buffer)
-
-	if err!=nil {
-		t.Fatalf("Error reading from connection")
-	}
-
-	got = string(buffer[:n])
-
-	if got!="1" {
-		t.Errorf("Expected <<%v>> Got <<%v>>", "1", got)
+	expected := "10000"
+	if value!=expected {
+		t.Errorf("Expected <<%v>> Got <<%v>>", expected, value)
 	}
 }

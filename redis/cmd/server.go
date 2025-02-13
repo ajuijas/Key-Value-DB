@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"strings"
 )
 
@@ -60,6 +61,23 @@ func (server *Server) Run() {
 	}
 }
 
+func parseCommand(input string) []string {
+	re := regexp.MustCompile(`'([^']*)'|"([^"]*)"|(\S+)`)
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	var result []string
+	for _, match := range matches {
+		if match[1] != "" {
+			result = append(result, match[1])
+		} else if match[2] != "" {
+			result = append(result, match[2])
+		} else {
+			result = append(result, match[3])
+		}
+	}
+	return result
+}
+
 func (client *Client) handleRequest() {
 	client.reader = bufio.NewReader(client.conn)
 	for {
@@ -69,7 +87,7 @@ func (client *Client) handleRequest() {
 			return
 		}
 
-		cmd := strings.Fields(string(message))
+		cmd := parseCommand(string(message))
 
 		if len(cmd) == 0 {
 			client.conn.Write([]byte("\n"))
@@ -81,7 +99,7 @@ func (client *Client) handleRequest() {
 		switch strings.ToLower(cmd[0]){
 		case "exit": msg = "\n"; break
 		case "multi" : msg = client.handleMulti(cmd)
-		default : msg = client.executeCmd(cmd)
+		default : msg = client.executeCmd(cmd, false)
 		}
 		client.conn.Write([]byte(msg))
 	}
@@ -107,7 +125,9 @@ func (client *Client) handleMulti (args []string) string {
 
 		cmd := strings.Fields(string(message))
 		if strings.ToLower(cmd[0]) == "exec"{
-			break
+			msg := client.executeMulti(cmdList)
+			client.conn.Write([]byte("\n"))
+			return msg
 		}else if strings.ToLower(cmd[0]) == "discard"{
 			return "OK\n"
 		}else {
@@ -115,24 +135,28 @@ func (client *Client) handleMulti (args []string) string {
 			client.conn.Write([]byte("QUEUED\n"))
 		}
 	}
+}
+
+func (client *Client) executeMulti(cmdList [][]string) string {
+
+	client.storage.mutex.Lock()
+	defer client.storage.mutex.Unlock()
 
 	var msg string
-
-	client.storage.mutexMulti.Lock()
-	defer client.storage.mutexMulti.Unlock()
-
 	for i, cmd := range cmdList {
-		resp := client.executeCmd(cmd)
+		resp := client.executeCmd(cmd, true)
 		msg += fmt.Sprintf("%v) %v", i+1, resp)
 	}
 	return msg
 }
 
-func (client *Client) executeCmd (cmd []string) string {
+func (client *Client) executeCmd (cmd []string, isMulti bool) string {
 		var msg string
 
-		client.storage.mutex.Lock()
-		defer client.storage.mutex.Unlock()
+		if !isMulti{ // The goroutine is already locked for multi.
+			client.storage.mutex.Lock()
+			defer client.storage.mutex.Unlock()
+		}
 
 		switch strings.ToLower(cmd[0]){  // TODO: Is there any better method than switch for this?
 		case "set":
