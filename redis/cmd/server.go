@@ -99,7 +99,7 @@ func (client *Client) handleRequest() {
 		switch strings.ToLower(cmd[0]){
 		case "exit": msg = "\n"; break
 		case "multi" : msg = client.handleMulti(cmd)
-		default : msg = client.executeCmd(cmd)
+		default : msg = client.executeCmd(cmd, false)
 		}
 		client.conn.Write([]byte(msg))
 	}
@@ -125,9 +125,7 @@ func (client *Client) handleMulti (args []string) string {
 
 		cmd := strings.Fields(string(message))
 		if strings.ToLower(cmd[0]) == "exec"{
-			client.storage.mutexMulti.Lock()
 			msg := client.executeMulti(cmdList)
-			client.storage.mutexMulti.Unlock()
 			client.conn.Write([]byte("\n"))
 			return msg
 		}else if strings.ToLower(cmd[0]) == "discard"{
@@ -140,19 +138,25 @@ func (client *Client) handleMulti (args []string) string {
 }
 
 func (client *Client) executeMulti(cmdList [][]string) string {
+
+	client.storage.mutex.Lock()
+	defer client.storage.mutex.Unlock()
+
 	var msg string
 	for i, cmd := range cmdList {
-		resp := client.executeCmd(cmd)
+		resp := client.executeCmd(cmd, true)
 		msg += fmt.Sprintf("%v) %v", i+1, resp)
 	}
 	return msg
 }
 
-func (client *Client) executeCmd (cmd []string) string {
+func (client *Client) executeCmd (cmd []string, isMulti bool) string {
 		var msg string
 
-		client.storage.mutex.Lock()
-		defer client.storage.mutex.Unlock()
+		if !isMulti{ // The goroutine is already locked for multi.
+			client.storage.mutex.Lock()
+			defer client.storage.mutex.Unlock()
+		}
 
 		switch strings.ToLower(cmd[0]){  // TODO: Is there any better method than switch for this?
 		case "set":

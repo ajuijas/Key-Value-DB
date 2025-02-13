@@ -213,20 +213,20 @@ func Test_atominc_multi_ops(t *testing.T) {
 	defer conn2.Close()
 	defer conn3.Close()
 
-	// sendDBCommand("multi", conn1)
+	sendDBCommand("multi", conn1)
 	sendDBCommand("multi", conn2)
 
 	for i:=0; i<n; i ++{
-		// _, _ = conn1.Write([]byte("incr key\n"))
+		_, _ = conn1.Write([]byte("incr key\n"))
 		_, _ = conn2.Write([]byte("incr key\n"))
 		// sendDBCommand("incr key", conn1)
 		// sendDBCommand("incrby key 1", conn1)
 	}
 
-	// _, _ = conn1.Write([]byte("exec\n"))
+	_, _ = conn1.Write([]byte("exec\n"))
 	_, _ = conn2.Write([]byte("exec\n"))
 
-	time.Sleep(2*time.Second)
+	// time.Sleep(2*time.Second)
 
 	value := sendDBCommand("get key", conn3)
 
