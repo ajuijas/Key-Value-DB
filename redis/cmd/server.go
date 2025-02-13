@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"strings"
 )
 
@@ -60,6 +61,23 @@ func (server *Server) Run() {
 	}
 }
 
+func parseCommand(input string) []string {
+	re := regexp.MustCompile(`'([^']*)'|"([^"]*)"|(\S+)`)
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	var result []string
+	for _, match := range matches {
+		if match[1] != "" {
+			result = append(result, match[1])
+		} else if match[2] != "" {
+			result = append(result, match[2])
+		} else {
+			result = append(result, match[3])
+		}
+	}
+	return result
+}
+
 func (client *Client) handleRequest() {
 	client.reader = bufio.NewReader(client.conn)
 	for {
@@ -69,7 +87,7 @@ func (client *Client) handleRequest() {
 			return
 		}
 
-		cmd := strings.Fields(string(message))
+		cmd := parseCommand(string(message))
 
 		if len(cmd) == 0 {
 			client.conn.Write([]byte("\n"))
@@ -107,7 +125,11 @@ func (client *Client) handleMulti (args []string) string {
 
 		cmd := strings.Fields(string(message))
 		if strings.ToLower(cmd[0]) == "exec"{
-			break
+			client.storage.mutexMulti.Lock()
+			msg := client.executeMulti(cmdList)
+			client.storage.mutexMulti.Unlock()
+			client.conn.Write([]byte("\n"))
+			return msg
 		}else if strings.ToLower(cmd[0]) == "discard"{
 			return "OK\n"
 		}else {
@@ -115,12 +137,10 @@ func (client *Client) handleMulti (args []string) string {
 			client.conn.Write([]byte("QUEUED\n"))
 		}
 	}
+}
 
+func (client *Client) executeMulti(cmdList [][]string) string {
 	var msg string
-
-	client.storage.mutexMulti.Lock()
-	defer client.storage.mutexMulti.Unlock()
-
 	for i, cmd := range cmdList {
 		resp := client.executeCmd(cmd)
 		msg += fmt.Sprintf("%v) %v", i+1, resp)
