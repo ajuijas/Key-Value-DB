@@ -297,6 +297,27 @@ func Test_rdbFile(t *testing.T) {
 func Test_db_loaded_from_rdbFile(t *testing.T) {
 	//TODO: This is a very basic test. I need to test more cases
 
+	// TODO: Got the following error while running this test. Move this TODO to a git issue asap
+// 	panic: runtime error: invalid memory address or nil pointer dereference [recovered]
+//         panic: runtime error: invalid memory address or nil pointer dereference
+// [signal SIGSEGV: segmentation violation code=0x2 addr=0x0 pc=0x102b8c550]
+
+// goroutine 82 [running]:
+// testing.tRunner.func1.2({0x102c3cdc0, 0x102e544e0})
+//         /usr/local/go/src/testing/testing.go:1632 +0x1bc
+// testing.tRunner.func1()
+//         /usr/local/go/src/testing/testing.go:1635 +0x334
+// panic({0x102c3cdc0?, 0x102e544e0?})
+//         /usr/local/go/src/runtime/panic.go:785 +0x124
+// redis/redis/cmd.Test_atominc_multi_ops(0x140000b0000)
+//         /Users/ijasahammed/Documents/learn/go/one2n/Key-Value-DB/redis/cmd/root_test.go:225 +0x320
+// testing.tRunner(0x140000b0000, 0x102c8ae58)
+//         /usr/local/go/src/testing/testing.go:1690 +0xe4
+// created by testing.(*T).Run in goroutine 1
+//         /usr/local/go/src/testing/testing.go:1743 +0x314
+// FAIL    redis/redis/cmd 2.449s
+// FAIL
+
 	host, port := "localhost", "8085"
 
 	// start the server
@@ -325,7 +346,7 @@ func Test_db_loaded_from_rdbFile(t *testing.T) {
 
 	got := sendDBCommand("get key", conn)
 
-	if got != "45" {
-		t.Errorf("Expected <<45>> Got <<%v>>", got)
+	if got != "51" {
+		t.Errorf("Expected <<51>> Got <<%v>>", got)
 	}
 }

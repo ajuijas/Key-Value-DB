@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"regexp"
 	"strings"
 )
 
 // Server ...
 type Server struct {
-	host    string
-	port    string
+	config  Config
 	storage *Storage
 }
 
@@ -34,8 +34,7 @@ type Config struct {
 // New ...
 func New(config *Config) *Server {
 	server := &Server{
-		host:    config.Host,
-		port:    config.Port,
+		config:    *config,
 		storage: getStorage(),
 	}
 	return server
@@ -43,12 +42,14 @@ func New(config *Config) *Server {
 
 // Run ...
 func (server *Server) Run() {
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", server.host, server.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", server.config.Host, server.config.Port))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Server listening to %s:%s \n", server.host, server.port)
+	fmt.Printf("Server listening to %s:%s \n", server.config.Host, server.config.Port)
 	defer listener.Close()
+
+	server.loadFromrdb()
 
 	for {
 		conn, err := listener.Accept()
@@ -63,6 +64,30 @@ func (server *Server) Run() {
 		}
 
 		go client.handleRequest()
+	}
+}
+
+func (server *Server) loadFromrdb() {
+	file, err := os.OpenFile(server.config.StorageFile + "dump.rdb", os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	client := &Client{
+		storage: server.storage,
+		log:     nil, // log is mocked.
+	}
+
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		client.executeCmd(parseCommand(scanner.Text()), false)
+	}
+
+	err = scanner.Err()
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -185,7 +210,7 @@ func (client *Client) executeCmd(cmd []string, isMulti bool) (string) {
 		msg = "(error) ERR unknown command '" + cmd[0] + "', with args beginning with: '" + strings.Join(cmd[1:], "' '") + "'\n"
 	}
 
-	if isValueChanged {
+	if isValueChanged && client.log != nil {
 		// log the cmd to backup file
 		client.log.log.Println(strings.Join(cmd, " "))
 		// fmt.Println(strings.Join(cmd, " "))
