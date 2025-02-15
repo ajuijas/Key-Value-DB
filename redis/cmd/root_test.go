@@ -243,7 +243,7 @@ func Test_atominc_multi_ops(t *testing.T) {
 
 	value := sendDBCommand("get key", conn3)
 
-	expected := "20000"
+	expected := "20000"  // TODO: This test sometimes gives false negative result
 	if value != expected { // TODO: not a perferct test. The got value can be 10000 if there is a race condition/buffer lag
 		t.Errorf("Expected <<%v>> Got <<%v>>", expected, value)
 	}
@@ -290,5 +290,42 @@ func Test_rdbFile(t *testing.T) {
 	got := string(data)
 	if got != expectedContent {
 		t.Errorf("Expected <<%v>> Got <<%v>>", expectedContent, got)
+	}
+}
+
+
+func Test_db_loaded_from_rdbFile(t *testing.T) {
+	//TODO: This is a very basic test. I need to test more cases
+
+	host, port := "localhost", "8085"
+
+	// start the server
+	dbFile := uuid.New().String() + "/"
+	_ = os.MkdirAll(dbFile, os.ModePerm)
+	defer os.RemoveAll(dbFile)
+
+	// Write some data to the rdb file
+	file, err := os.OpenFile(dbFile+"dump.rdb", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	_, err = file.Write([]byte("set key 55\ndel key\nset key 45\nincr key\nincrby key 5\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	file.Close()
+
+	rootCmd.SetArgs([]string{"-H", host, "-p", port, "-s", dbFile})
+	go rootCmd.Execute()
+
+	conn, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	defer conn.Close()
+
+	got := sendDBCommand("get key", conn)
+
+	if got != "45" {
+		t.Errorf("Expected <<45>> Got <<%v>>", got)
 	}
 }
