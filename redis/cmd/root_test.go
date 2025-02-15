@@ -1,15 +1,19 @@
 package cmd
 
 import (
+	"io"
 	"net"
+	"os"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func Test_redis_commands(t *testing.T) {
 	tests := []struct {
-		command string
+		command  string
 		expacted string
 	}{
 		{"", "\n"},
@@ -38,7 +42,7 @@ func Test_redis_commands(t *testing.T) {
 		{"INCR key", "(integer) 1\n"},
 		{"INCR key", "(integer) 2\n"},
 		{"INCR key", "(integer) 3\n"},
-	
+
 		{"INCRBY key 3", "(integer) 6\n"},
 		{"INCRBY key -2", "(integer) 4\n"},
 		{"INCRBY key3 -2", "(integer) -2\n"},
@@ -72,21 +76,24 @@ func Test_redis_commands(t *testing.T) {
 
 	host, port := "localhost", "8081"
 
-	// start the server 
-	rootCmd.SetArgs([]string{"-H", host, "-p", port})
+	// start the server
+	dbFile := uuid.New().String() + "/"
+	_ = os.MkdirAll(dbFile, os.ModePerm)
+	defer os.RemoveAll(dbFile)
+	rootCmd.SetArgs([]string{"-H", host, "-p", port, "-s", dbFile})
 	go rootCmd.Execute()
 
-	conn, err := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-	if err!=nil {
+	conn, err := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	if err != nil {
 		t.Fatalf("Unable to connect to test server")
 	}
 	defer conn.Close()
 
-	for _, test := range tests{
+	for _, test := range tests {
 
 		request := test.command + "\n"
 		_, err = conn.Write([]byte(request))
-		if err!=nil {
+		if err != nil {
 			t.Fatalf("Error while write to connection")
 		}
 
@@ -94,13 +101,13 @@ func Test_redis_commands(t *testing.T) {
 
 		n, err := conn.Read(buffer)
 
-		if err!=nil {
+		if err != nil {
 			t.Fatalf("Error reading from connection")
 		}
 
 		got := string(buffer[:n])
 
-		if got!=test.expacted {
+		if got != test.expacted {
 			t.Errorf("Expected <<%v>> Got <<%v>>", test.expacted, got)
 		}
 	}
@@ -116,14 +123,17 @@ func Test_atomic_operations(t *testing.T) {
 	host, port := "localhost", "8082"
 
 	// start the server
-	rootCmd.SetArgs([]string{"-H", host, "-p", port})
+	dbFile := uuid.New().String() + "/"
+	_ = os.MkdirAll(dbFile, os.ModePerm)
+	defer os.RemoveAll(dbFile)
+	rootCmd.SetArgs([]string{"-H", host, "-p", port, "-s", dbFile})
 	go rootCmd.Execute()
 
-	conn1, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-	conn2, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-	conn3, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-	conn4, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-	conn5, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn1, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	conn2, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	conn3, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	conn4, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	conn5, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
 
 	defer conn1.Close()
 	defer conn2.Close()
@@ -139,7 +149,7 @@ func Test_atomic_operations(t *testing.T) {
 		if val >= count {
 			break
 		}
-		for _, connection := range connections{
+		for _, connection := range connections {
 
 			if val >= count {
 				break
@@ -150,34 +160,34 @@ func Test_atomic_operations(t *testing.T) {
 		}
 	}
 
-		time.Sleep(2 * time.Second) // Assumes that all the operations are completed after 3 seconds
+	time.Sleep(2 * time.Second) // Assumes that all the operations are completed after 3 seconds
 
-		conn6, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-		defer conn6.Close()
+	conn6, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	defer conn6.Close()
 
-		_, err := conn6.Write([]byte("get " + key + "\n"))
-		if err!=nil {
-			t.Fatalf("Error while write to connection")
-		}
+	_, err := conn6.Write([]byte("get " + key + "\n"))
+	if err != nil {
+		t.Fatalf("Error while write to connection")
+	}
 
-		buffer := make([]byte, 4096)
+	buffer := make([]byte, 4096)
 
-		n, err := conn6.Read(buffer)
+	n, err := conn6.Read(buffer)
 
-		if err!=nil {
-			t.Fatalf("Error reading from connection")
-		}
+	if err != nil {
+		t.Fatalf("Error reading from connection")
+	}
 
-		got := string(buffer[:n])
+	got := string(buffer[:n])
 
-		if got!=strconv.Itoa(count) {
-			t.Errorf("Expected <<%v>> Got <<%v>>", strconv.Itoa(count), got)
-		}
+	if got != strconv.Itoa(count) {
+		t.Errorf("Expected <<%v>> Got <<%v>>", strconv.Itoa(count), got)
+	}
 }
 
 func sendDBCommand(cmd string, conn net.Conn) string {
 	_, err := conn.Write([]byte(cmd + "\n"))
-	if err!=nil {
+	if err != nil {
 		panic("Error while write to connection")
 	}
 
@@ -185,7 +195,7 @@ func sendDBCommand(cmd string, conn net.Conn) string {
 
 	n, err := conn.Read(buffer)
 
-	if err!=nil {
+	if err != nil {
 		panic("Error reading from connection")
 	}
 	got := string(buffer[:n])
@@ -200,14 +210,17 @@ func Test_atominc_multi_ops(t *testing.T) {
 	host, port := "localhost", "8083"
 
 	// start the server
-	rootCmd.SetArgs([]string{"-H", host, "-p", port})
+	dbFile := uuid.New().String() + "/"
+	_ = os.MkdirAll(dbFile, os.ModePerm)
+	defer os.RemoveAll(dbFile)
+	rootCmd.SetArgs([]string{"-H", host, "-p", port, "-s", dbFile})
 	go rootCmd.Execute()
 
 	n := 10000
 
-	conn1, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-	conn2, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
-	conn3, _ := net.DialTimeout("tcp", host + ":" + port, 5*time.Second)
+	conn1, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	conn2, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	conn3, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
 
 	defer conn1.Close()
 	defer conn2.Close()
@@ -216,7 +229,7 @@ func Test_atominc_multi_ops(t *testing.T) {
 	sendDBCommand("multi", conn1)
 	sendDBCommand("multi", conn2)
 
-	for i:=0; i<n; i ++{
+	for i := 0; i < n; i++ {
 		_, _ = conn1.Write([]byte("incr key\n"))
 		_, _ = conn2.Write([]byte("incr key\n"))
 		// sendDBCommand("incr key", conn1)
@@ -231,7 +244,51 @@ func Test_atominc_multi_ops(t *testing.T) {
 	value := sendDBCommand("get key", conn3)
 
 	expected := "20000"
-	if value!=expected {
+	if value != expected { // TODO: not a perferct test. The got value can be 10000 if there is a race condition/buffer lag
 		t.Errorf("Expected <<%v>> Got <<%v>>", expected, value)
+	}
+}
+
+func Test_rdbFile(t *testing.T) {
+
+	host, port := "localhost", "8084"
+
+	// start the server
+	dbFile := uuid.New().String() + "/"
+	_ = os.MkdirAll(dbFile, os.ModePerm)
+	defer os.RemoveAll(dbFile)
+	rootCmd.SetArgs([]string{"-H", host, "-p", port, "-s", dbFile})
+	go rootCmd.Execute()
+
+	conn, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
+	defer conn.Close()
+
+	_ = sendDBCommand("set key 55", conn)
+	_ = sendDBCommand("get key", conn)
+	_ = sendDBCommand("del key", conn)
+	_ = sendDBCommand("set key 45", conn)
+	_ = sendDBCommand("incr key", conn)
+	_ = sendDBCommand("incrby key 5", conn)
+	_ = sendDBCommand("exit", conn)
+
+	time.Sleep(2 * time.Second)
+
+	file, err := os.Open("./" + dbFile + "dump.rdb")
+	if err != nil {
+		t.Fatalf("Error while reading from file")
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatalf("Error while reading from file")
+	}
+
+	// I am expecting the set, incr, incrby, and del commands to be in the file.
+	// get, exit and multi commands are not expected in the file
+	expectedContent := "set key 55\ndel key\nset key 45\nincr key\nincrby key 5\n"
+	got := string(data)
+	if got != expectedContent {
+		t.Errorf("Expected <<%v>> Got <<%v>>", expectedContent, got)
 	}
 }

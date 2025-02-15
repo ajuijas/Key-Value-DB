@@ -11,31 +11,34 @@ import (
 
 // Server ...
 type Server struct {
-	host string
-	port string
+	host    string
+	port    string
 	storage *Storage
 }
 
 // Client ...
 type Client struct {
-	conn net.Conn
-	reader *bufio.Reader
+	conn    net.Conn
+	reader  *bufio.Reader
 	storage *Storage
+	log *Logger
 }
 
 // Config ...
 type Config struct {
-	Host string
-	Port string
+	Host        string
+	Port        string
+	StorageFile string
 }
 
 // New ...
 func New(config *Config) *Server {
-	return &Server{
-		host: config.Host,
-		port: config.Port,
+	server := &Server{
+		host:    config.Host,
+		port:    config.Port,
 		storage: getStorage(),
 	}
+	return server
 }
 
 // Run ...
@@ -54,9 +57,11 @@ func (server *Server) Run() {
 		}
 
 		client := &Client{
-			conn: conn,
+			conn:    conn,
 			storage: server.storage,
+			log:     NewLogger(),
 		}
+
 		go client.handleRequest()
 	}
 }
@@ -78,61 +83,66 @@ func parseCommand(input string) []string {
 	return result
 }
 
+func (client *Client) close () {
+	client.conn.Close()
+	client.log.Close()
+}
+
 func (client *Client) handleRequest() {
 	client.reader = bufio.NewReader(client.conn)
 	for {
 		message, err := client.reader.ReadString('\n')
 		if err != nil {
-			client.conn.Close()
+			client.close()
 			return
 		}
 
 		cmd := parseCommand(string(message))
 
 		if len(cmd) == 0 {
-			client.conn.Write([]byte("\n"))
+			_, _ = client.conn.Write([]byte("\n"))
 			continue
 		}
 
 		var msg string
 
-		switch strings.ToLower(cmd[0]){
-		case "exit": msg = "\n"; break
-		case "multi" : msg = client.handleMulti(cmd)
-		default : msg = client.executeCmd(cmd, false)
+		switch strings.ToLower(cmd[0]) {
+		case "exit":
+			msg = "\n"
+		case "multi":
+			msg = client.handleMulti(cmd)
+		default:
+			msg = client.executeCmd(cmd, false)
 		}
-		client.conn.Write([]byte(msg))
+		_, _ = client.conn.Write([]byte(msg))
 	}
 }
 
-func (client *Client) handleMulti (args []string) string {
+func (client *Client) handleMulti(args []string) string {
 
 	if len(args) != 1 {
 		return "(error) ERR wrong number of arguments for 'multi' command"
 	}
-
-	client.conn.Write([]byte("OK\n"))
+	_, _ = client.conn.Write([]byte("OK\n")) // TODO: Move client.conn.Write to a function with proper error handling
 	var cmdList [][]string
-
 
 	for {
 		message, err := client.reader.ReadString('\n')
-
 		if err != nil {
 			client.conn.Close()
 			return "\n" // TODO: correct error handling
 		}
 
 		cmd := strings.Fields(string(message))
-		if strings.ToLower(cmd[0]) == "exec"{
+		if strings.ToLower(cmd[0]) == "exec" {
 			msg := client.executeMulti(cmdList)
-			client.conn.Write([]byte("\n"))
+			_, _ =client.conn.Write([]byte("\n"))
 			return msg
-		}else if strings.ToLower(cmd[0]) == "discard"{
+		} else if strings.ToLower(cmd[0]) == "discard" {
 			return "OK\n"
-		}else {
+		} else {
 			cmdList = append(cmdList, cmd)
-			client.conn.Write([]byte("QUEUED\n"))
+			_, _ = client.conn.Write([]byte("QUEUED\n"))
 		}
 	}
 }
@@ -150,27 +160,36 @@ func (client *Client) executeMulti(cmdList [][]string) string {
 	return msg
 }
 
-func (client *Client) executeCmd (cmd []string, isMulti bool) string {
-		var msg string
+func (client *Client) executeCmd(cmd []string, isMulti bool) (string) {
+	var msg string
 
-		if !isMulti{ // The goroutine is already locked for multi.
-			client.storage.mutex.Lock()
-			defer client.storage.mutex.Unlock()
-		}
+	if !isMulti { // The goroutine is already locked for multi.
+		client.storage.mutex.Lock()
+		defer client.storage.mutex.Unlock()
+	}
 
-		switch strings.ToLower(cmd[0]){  // TODO: Is there any better method than switch for this?
-		case "set":
-			msg = client.storage.set(cmd[1:])
-		case "get":
-			msg = client.storage.get(cmd[1:])
-		case "del":
-			msg = client.storage.del(cmd[1:])
-		case "incr":
-			msg = client.storage.incr(cmd[1:])
-		case "incrby":
-			msg = client.storage.incrby(cmd[1:])
-		default:
-			msg = "(error) ERR unknown command '" + cmd[0] + "', with args beginning with: '" + strings.Join(cmd[1:], "' '") + "'\n"
-		}
-		return msg
+	isValueChanged := false
+
+	switch strings.ToLower(cmd[0]) { // TODO: Is there any better method than switch for this?
+	case "set":
+		isValueChanged, msg = client.storage.set(cmd[1:])
+	case "get":
+		_, msg = client.storage.get(cmd[1:])
+	case "del":
+		isValueChanged, msg = client.storage.del(cmd[1:])
+	case "incr":
+		isValueChanged, msg = client.storage.incr(cmd[1:])
+	case "incrby":
+		isValueChanged, msg = client.storage.incrby(cmd[1:])
+	default:
+		msg = "(error) ERR unknown command '" + cmd[0] + "', with args beginning with: '" + strings.Join(cmd[1:], "' '") + "'\n"
+	}
+
+	if isValueChanged {
+		// log the cmd to backup file
+		client.log.log.Println(strings.Join(cmd, " "))
+		// fmt.Println(strings.Join(cmd, " "))
+	}
+
+	return msg
 }
