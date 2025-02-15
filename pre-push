@@ -2,7 +2,7 @@
 
 echo "Running pre-push tests..."
 
-go test -v ../../redis/cmd # ??
+go test -v ./redis/cmd # ??
 
 if [ $? -ne 0 ]; then
     echo "Tests failed! Aborting push."
