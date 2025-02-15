@@ -240,6 +240,7 @@ func Test_atominc_multi_ops(t *testing.T) {
 	value := sendDBCommand("get key", conn3)
 
 	if value != "(nil)" && value != "10000" && value != "20000"{
+		// The test is failed if the value is not 10000 or 20000 or (nil), since the operations are atomic
 		t.Errorf("Expected <<%v>> Got <<%v>>", "any of (10000, 20000, (nil))", value)
 	}
 }
