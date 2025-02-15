@@ -50,6 +50,5 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().StringVarP(&config.Host, "host", "H", "localhost", "Server hostname (default: localhost).")
 	rootCmd.PersistentFlags().StringVarP(&config.Port, "port", "p", "8080", "Server port (default: 8080).")
+	rootCmd.PersistentFlags().StringVarP(&config.StorageFile, "storage-file", "s", "/usr/local/var/db/my_redis/", "Storage file (default: storage.json).")
 }
-
-
