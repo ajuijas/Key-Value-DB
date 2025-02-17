@@ -133,7 +133,9 @@ func (client *Client) handleRequest() {
 
 		switch strings.ToLower(cmd[0]) {
 		case "exit":
-			msg = "\n"
+			_, _ = client.conn.Write([]byte("Bye!\n"))
+			client.close()
+			return
 		case "multi":
 			msg = client.handleMulti(cmd)
 		default:

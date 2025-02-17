@@ -71,7 +71,7 @@ func Test_redis_commands(t *testing.T) {
 		{"GET key1", "(nil)\n"},
 		// TODO: Add testcases where error occured while using multi ops
 
-		{"exit", "\n"},
+		{"exit", "Bye!\n"},
 	}
 
 	host, port := "localhost", "8081"
