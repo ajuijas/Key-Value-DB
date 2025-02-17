@@ -32,7 +32,7 @@ func (s *Storage) get (args []string) (bool, string) {
 	if strVal, ok := value.(string); ok {
 		return true, wrapString(strVal) + "\n"
 	}
-	return true, fmt.Sprintf("%v", value)
+	return true, wrapString(fmt.Sprintf("%v", value)) + "\n"
 }
 
 func (s *Storage) del (keys []string) (bool,string) {

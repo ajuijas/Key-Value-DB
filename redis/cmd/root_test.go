@@ -42,6 +42,7 @@ func Test_redis_commands(t *testing.T) {
 		{"INCR key", "(integer) 1\n"},
 		{"INCR key", "(integer) 2\n"},
 		{"INCR key", "(integer) 3\n"},
+		{"GET key", "\"3\"\n"},
 
 		{"INCRBY key 3", "(integer) 6\n"},
 		{"INCRBY key -2", "(integer) 4\n"},
@@ -179,9 +180,10 @@ func Test_atomic_operations(t *testing.T) {
 	}
 
 	got := string(buffer[:n])
+	expected := "\"" + strconv.Itoa(count) + "\"" + "\n"
 
-	if got != strconv.Itoa(count) {
-		t.Errorf("Expected <<%v>> Got <<%v>>", strconv.Itoa(count), got)
+	if got != expected {
+		t.Errorf("Expected <<%v>> Got <<%v>>", expected, got)
 	}
 }
 
@@ -239,7 +241,7 @@ func Test_atominc_multi_ops(t *testing.T) {
 
 	value := sendDBCommand("get key", conn3)
 
-	if value != "(nil)\n" && value != "10000" && value != "20000"{
+	if value != "(nil)\n" && value != "\"10000\"\n" && value != "\"20000\"\n" {
 		// The test is failed when the 'got value' is not 10000 or 20000 or (nil), since the operations are atomic
 		t.Errorf("Expected <<%v>> Got <<%v>>", "any of (10000, 20000, (nil))", value)
 	}
@@ -320,8 +322,9 @@ func Test_db_loaded_from_rdbFile(t *testing.T) {
 	defer conn.Close()
 
 	got := sendDBCommand("get key", conn)
+	expected := "\"51\"\n"
 
-	if got != "51" {
-		t.Errorf("Expected <<51>> Got <<%v>>", got)
+	if got != expected {
+		t.Errorf("Expected <<%v>> Got <<%v>>", expected, got)
 	}
 }
