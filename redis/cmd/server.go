@@ -110,7 +110,9 @@ func parseCommand(input string) []string {
 
 func (client *Client) close () {
 	client.conn.Close()
-	client.log.Close()
+	if client.log != nil {
+		client.log.Close()
+	}
 }
 
 func (client *Client) handleRequest() {
