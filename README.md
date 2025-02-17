@@ -102,3 +102,11 @@ The server automatically saves data to the specified storage path in an RDB file
 - All commands are case-insensitive
 - String values containing spaces should be wrapped in quotes
 - The server supports multiple concurrent client connections
+
+### Running Tests
+
+To run tests for the project, execute the following command from the project root:
+
+```bash
+go test ./...
+```
