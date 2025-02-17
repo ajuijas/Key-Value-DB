@@ -1,6 +1,6 @@
 # Simple Key-Value Database in Go
 
-This is a simple Redis-like key-value database server implemented in Go. It allows you to store and retrieve data using a simple command-line interface through telnet.
+This is a simple Redis-like key-value database server implemented in Go. It allows to store and retrieve data using a simple command-line interface through telnet.
 
 ## Features
 
@@ -14,12 +14,12 @@ This is a simple Redis-like key-value database server implemented in Go. It allo
 
 ### Prerequisites
 
-- Go 1.x or higher installed on your system
-- Telnet client for connecting to the server
+- Go
+- Telnet client
 
 ### Building the Binary
 
-You can build a binary file for the server. Run the following command from the project root:
+You can build the binary file for the server. Run the following command from the project root:
 
 ```bash
 go build -o my-redis redis/main.go
@@ -38,7 +38,7 @@ The server runs using the binary file. By default, it listens on:
 - Port: 8080
 - Storage path: /usr/local/var/db/my_redis/
 
-You can override settings using flags:
+Override settings using the flags:
 
 ```bash
 ./my-redis -H <host> -p <port> -s <storage-path>
@@ -105,7 +105,7 @@ The server automatically saves data to the specified storage path in an RDB file
 
 ### Running Tests
 
-To run tests for the project, execute the following command from the project root:
+To run tests, execute the following command from the root:
 
 ```bash
 go test ./...
