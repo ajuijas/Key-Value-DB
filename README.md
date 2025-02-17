@@ -19,7 +19,7 @@ This is a simple Redis-like key-value database server implemented in Go. It allo
 
 ### Building the Binary
 
-Alternatively, you can build a binary file for the server. Run the following command from the project root:
+You can build a binary file for the server. Run the following command from the project root:
 
 ```bash
 go build -o my-redis redis/main.go
