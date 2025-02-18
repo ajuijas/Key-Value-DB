@@ -38,13 +38,6 @@ func handleMockedRequest (conn net.Conn) {
 			conn.Close()
 			return
 		}
-
-		if message == "exit\n" {
-			conn.Write([]byte("connection closed\n"))
-			conn.Close()
-			return
-		}
-
 		_, _ = conn.Write([]byte(message))
 	}
 }
@@ -70,6 +63,7 @@ func Test_mockedServer(t *testing.T) {
 		{client.Del([]string{"key1", "key2"}), "del key1 key2\n"},
 		{client.Incr("key"), "incr key\n"},
 		{client.Incrby("key", 3), "incrby key 3\n"},
+		{client.Close(), "exit\n"},
 	}
 
 	for _, test := range tests {
@@ -77,5 +71,4 @@ func Test_mockedServer(t *testing.T) {
 			t.Errorf("Expected <<%v>> Got <<%v>>", test.expected, test.funcCall)
 		}
 	}
-
 }

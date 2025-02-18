@@ -53,6 +53,10 @@ func (c *Client) Incrby (key string, value int) string {
 	return sendDBCommand("incrby "+key+" "+strconv.Itoa(value), c.servers, c.servers[0])
 }
 
+func (c *Client) Close () string {
+	return sendDBCommand("exit", c.servers, c.servers[0])
+}
+
 func sendDBCommand(command string, servers []Server, readServer Server) string {
 	// I will send command to all the servers
 	// Currently waiting for the response from one server only
