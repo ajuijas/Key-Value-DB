@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"redis/rediscli"
+	"redis/redisclient"
 )
 
 // Start the server using the binary
@@ -11,7 +11,7 @@ import (
 
 
 func main() {
-	client := rediscli.NewClient("localhost", "8080")
+	client := redisclient.NewClient("localhost", "8080")
 	fmt.Println(client.Set("key", "value"))
 	fmt.Println(client.Get("key"))
 	fmt.Println(client.Del([]string{"key", "key2"}))

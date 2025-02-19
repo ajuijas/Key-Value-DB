@@ -1,4 +1,4 @@
-package rediscli
+package redisclient
 
 import (
 	"bufio"
