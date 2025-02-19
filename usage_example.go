@@ -11,7 +11,7 @@ import (
 
 
 func main() {
-	client := redisclient.NewClient("localhost", "8080")
+	client := redisclient.NewClient([]string{"localhost:8080"}, 1, 1)
 	fmt.Println(client.Set("key", "value"))
 	fmt.Println(client.Get("key"))
 	fmt.Println(client.Del([]string{"key", "key2"}))

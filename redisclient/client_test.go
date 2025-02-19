@@ -6,17 +6,16 @@ import (
 	"log"
 	"net"
 	"testing"
-	"time"
 )
 
 
-func runMockedServer (host, port string) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", host, port))
+func runMockedServer (host string) {
+	listener, err := net.Listen("tcp", host)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Mocked server listening to ", host, ":", port)
+	fmt.Println("Mocked server listening to ", host)
 	defer listener.Close()
 
 	for {
@@ -46,14 +45,15 @@ func Test_mockedServer(t *testing.T) {
 
 	// In for this test I will test my client with a mocked tcp servers.
 	// The servers will always return the same command back to the client.
+	hosts := []string{"localhost:8085", "localhost:8086", "localhost:8087"}
+	for _, host := range hosts {
+		go runMockedServer(host)
+	}
 
-	host, port := "localhost", "8085"
-	go runMockedServer(host, port)
+	// conn, _ := net.DialTimeout("tcp", host, 5*time.Second)
+	// defer conn.Close()
 
-	conn, _ := net.DialTimeout("tcp", host+":"+port, 5*time.Second)
-	defer conn.Close()
-
-	client := NewClient(host, port)
+	client := NewClient(hosts, 1, 1)
 	
 	tests := []struct {
 		funcCall, expected string
